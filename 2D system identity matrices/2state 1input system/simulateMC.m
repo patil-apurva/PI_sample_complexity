@@ -1,0 +1,18 @@
+function S_tau_all = simulateMC(u_t_prime_1, u_t_prime_2, x_t_prime_1,  x_t_prime_2, S2_hat, t, T, M, A, B)
+
+    S_tau = 0; %the cost-to-go of the state dependent cost of a sample path
+    
+    for t_prime = t:1:T-1 % this loop is to compute S(tau_i)
+                
+        S_tau = S_tau + 0.5*M*(x_t_prime_1*x_t_prime_1 + x_t_prime_2*x_t_prime_2); %add the state dependent running cost
+        
+        x_t_prime_1 = A*x_t_prime_1 + B*u_t_prime_1;
+        x_t_prime_2 = A*x_t_prime_2 + B*u_t_prime_2;
+
+        u_t_prime_1 = sqrt(S2_hat)*randn; %u_t_1 at new t_prime. Will be used in the next iteration 
+        u_t_prime_2 = sqrt(S2_hat)*randn; %u_t_2 at new t_prime. Will be used in the next iteration
+    end
+
+    S_tau = S_tau + 0.5*M*(x_t_prime_1*x_t_prime_1 + x_t_prime_2*x_t_prime_2); %add the terminal cost to S_tau
+   
+    S_tau_all = S_tau;

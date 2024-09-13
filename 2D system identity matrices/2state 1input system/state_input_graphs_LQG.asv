@@ -1,0 +1,90 @@
+clearvars
+close all
+rng('default') 
+
+A_t = [0.9 -0.1;
+    -0.1 0.8];
+B_t =[1, 0;
+    0, 0.1];
+M_t = eye(2); %state cost wt
+Omega_t = [1.5 0; 0 0.015]; %noise covariance
+N_t = [1, 0; 0, 0.01]; %control cost wt
+
+T = 10; %time horizon
+
+x_0 = [3; 3]; %initial state
+
+Theta_t = M_t; %terminal Theta, parameter for Riccati equation
+kappa_t = 0; %terminal kappa, parameter for Riccati equation
+K_t_all = cell(T,1);
+
+kappa_t_all(T+1) = {kappa_t};
+Theta_t_all(T+1) = {Theta_t};
+
+for t=T-1:-1:0
+    Theta_tp1 = Theta_t;
+    kappa_tp1 = kappa_t;
+    
+    K_t = -inv(B_t'*Theta_tp1*B_t + N_t)*B_t'*Theta_tp1*A_t;
+    Theta_t = A_t'*Theta_tp1*A_t + M_t - A_t'*Theta_tp1*B_t/(B_t'*Theta_tp1*B_t + N_t)*B_t'*Theta_tp1*A_t;
+    
+    kappa_t = kappa_tp1 + 0.5*trace(Omega_t*Theta_tp1);
+    
+    K_t_all(t+1) = {K_t};
+    kappa_t_all(t+1) = {kappa_t};
+    Theta_t_all(t+1) = {Theta_t};
+end
+
+x_t = x_0;
+u_t_all_LQG = [];
+x_t_all_LQG = [x_t];
+J_t_all_LQG = [];
+
+for t=0:T-1
+    
+    kappa_t = cell2mat(kappa_t_all(t+1));
+    Theta_t = cell2mat(Theta_t_all(t+1));
+    J_t = kappa_t + 0.5*(x_t')*Theta_t*x_t;
+    J_t_all_LQG = [J_t_all_LQG, J_t];
+    
+    K_t = cell2mat(K_t_all(t+1));
+    u_t = K_t*x_t;
+    u_t_all_LQG = [u_t_all_LQG, u_t];
+    
+    x_t = A_t*x_t + B_t*u_t;
+    x_t_all_LQG = [x_t_all_LQG, x_t];
+  
+end
+    
+    figure(3)
+    hold on
+    set(gca, 'FontName', 'Arial', 'FontSize', 30)
+    xlabel('$t$', 'Interpreter','latex', 'FontSize', 40); ylabel('$x$', 'Interpreter','latex','FontSize', 40); 
+    set(gca,'LineWidth',1)
+    ax = gca;
+    ax.LineWidth = 1;
+    ax.Color = 'w';
+    % axis equal;
+    xlim([0, T]);
+%     ylim([-1, 3]);
+    plot(linspace(0, T, T+1),  x_t_all_LQG(1,:), '--r', 'Linewidth', 1);
+    plot(linspace(0, T, T+1), x_t_all_LQG(2,:), '--r', 'Linewidth', 2);
+    lgd = legend('PI', 'Analytical');
+    
+
+    figure(4)
+    hold on
+    set(gca, 'FontName', 'Arial', 'FontSize', 30)
+    xlabel('$t$', 'Interpreter','latex', 'FontSize', 40); ylabel('$u$', 'Interpreter','latex','FontSize', 40); 
+    set(gca,'LineWidth',1)
+    ax = gca;
+    ax.LineWidth = 1;
+    ax.Color = 'w';
+    % axis equal;
+    xlim([0, T-1]);
+%     ylim([-1, 3]);
+    plot(linspace(0, T-1, T),  u_t_all_LQG(1,:), '--r', 'Linewidth', 1);
+    plot(linspace(0, T-1, T),  u_t_all_LQG(2,:), '--r', 'Linewidth', 1);
+    legend('PI', 'Analytical')
+    
+    
